@@ -13,7 +13,7 @@ QUERY_TASK_STATUS = "SELECT status FROM celery_taskmeta WHERE task_id=%s"
 
 PASSWORD = getenv('PASSWORD')
 
-csv_file_path = 'C:\\Users\\Sammy\\Desktop\\backend_project\\db\\'
+csv_file_path = 'C:\\Users\\Sammy\\Desktop\\backend_assignment\\db\\'
 
 connection = mysql.connector.connect(host='127.0.0.1', port=3306,
 																		user='root', password=PASSWORD,

@@ -4,4 +4,4 @@ db
 /src/.env
 /src/app.py
 venv
-*.txt
+scratch.txt

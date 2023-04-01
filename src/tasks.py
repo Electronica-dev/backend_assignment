@@ -2,14 +2,15 @@ from celery import Celery
 from celery import group
 from dotenv import load_dotenv
 from os import getenv
-from sync_app import convert_datetime_to_timedelta
-from sync_app import count_day_or_week_hours
-from sync_app import find_day_status
-from sync_app import find_week_status
-from sync_app import find_store_hours
-from sync_app import find_tz
-from sync_app import find_day_24_7_status
-from sync_app import find_hour_status
+from helper import convert_datetime_to_timedelta
+from helper import count_day_or_week_hours
+from helper import find_day_status
+from helper import find_week_status
+from helper import find_store_hours
+from helper import find_tz
+from helper import find_day_24_7_status
+from helper import find_hour_status
+from helper import find_store_ids
 from datetime import timedelta, timezone
 import datetime
 from dateutil import parser
@@ -192,7 +193,10 @@ def fromat_timedelta_to_hhmmss(td: timedelta):
 
 @app.task(bind=True)
 def enqueue_store_status_calculations(self):
-	csv_file = open(f'C:\\Users\\Sammy\\Desktop\\backend_project\\db\\{self.request.id}.csv', 'w', newline='')
+	store_id_list = find_store_ids()
+
+	csv_file = open(f'C:\\Users\\Sammy\\Desktop\\backend_assignment\\db\\{self.request.id}.csv', 'w', newline='')
+
 	header = ['store_id',
 						'uptime_last_hour',
 						'uptime_last_day',
@@ -207,14 +211,10 @@ def enqueue_store_status_calculations(self):
 	active_week_hours = active_day_hours = active_hours = 0
 	inactive_week_hours = inactive_day_hours = inactive_hours = 0
 
-	ids = [
-					3483930781272060000,
-					3981100817087735334,
-					4285890795849559187,
-					85496058573776375
-				]
+	for i in range(len(store_id_list)):
 
-	for store_id in ids:
+		store_id = store_id_list[i][0]
+
 		store_hours = find_store_hours(store_id)
 		store_hours = [
 										(weekday, fromat_timedelta_to_hhmmss(open_from), fromat_timedelta_to_hhmmss(open_till))

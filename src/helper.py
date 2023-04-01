@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from dotenv import load_dotenv
 from os import getenv
 from typing import List
+from typing import Tuple
 from dateutil import parser
 from datetime import timedelta
 import mysql.connector
@@ -17,7 +18,8 @@ connection = mysql.connector.connect(host='127.0.0.1', port=3306,
 																		user='root', password=PASSWORD,
 																		db='backend_app')
 
-QUERY_STORE_HOURS = ("SELECT day, start_time_local, end_time_local FROM menu_hours WHERE store_id=%s ORDER BY day")
+QUERY_STORE_IDS = "SELECT store_id FROM bq_results"
+QUERY_STORE_HOURS = "SELECT day, start_time_local, end_time_local FROM menu_hours WHERE store_id=%s ORDER BY day"
 #Currently the date is set to 26th of January (UTC). It can be changed to the current date and time using 'NOW()'
 QUERY_STORE_STATUS_WEEK = '''
 														SELECT status, timestamp_utc,
@@ -53,6 +55,12 @@ QUERY_STORE_STATUS_HOUR = '''
 														ORDER BY timestamp_local;
 													'''
 QUERY_STORE_TIMEZONE = ("SELECT timezone_str FROM bq_results WHERE store_id=%s")
+
+def find_store_ids() -> Tuple:
+	cursor = connection.cursor()
+	cursor.execute(QUERY_STORE_IDS)
+	store_ids = cursor.fetchall()
+	return store_ids
 
 def find_tz(store_id: int) -> str:
 	cursor = connection.cursor()
