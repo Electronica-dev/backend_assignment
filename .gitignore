@@ -1,0 +1,7 @@
+.vscode
+db
+/src/__pycache__
+/src/.env
+/src/app.py
+venv
+*.txt
