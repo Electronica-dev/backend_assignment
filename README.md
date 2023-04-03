@@ -5,3 +5,4 @@ A monitoring app for stores which extracts hourly status of a particular store f
 - FastAPI
 - celery
 - RabbitMQ
+- MySQL
