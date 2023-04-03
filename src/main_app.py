@@ -1,10 +1,12 @@
 import uvicorn
+import mysql.connector
+
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from tasks import enqueue_store_status_calculations
 from dotenv import load_dotenv
 from os import getenv
-import mysql.connector
+from typing import Tuple
 
 load_dotenv()
 app = FastAPI()
@@ -29,7 +31,7 @@ def return_file_if_exists(report_id):
 	cursor = connection.cursor()
 	cursor.execute(QUERY_TASK_STATUS, (report_id, ))
 	is_running = cursor.fetchone()
-	if is_running[0] == "SUCCESS":
+	if isinstance(is_running, Tuple) and isinstance(is_running[0], str) and is_running[0] == "SUCCESS":
 		connection.commit()
 		return FileResponse(csv_file_path + report_id + '.csv', filename=report_id + '.csv', media_type="text/csv")
 	else:

@@ -1,11 +1,15 @@
+import mysql.connector
+
 from fastapi import FastAPI
 from dotenv import load_dotenv
 from os import getenv
 from typing import List
 from typing import Tuple
+from typing import Union
+from typing import Any
 from dateutil import parser
 from datetime import timedelta
-import mysql.connector
+from datetime import datetime
 from concurrent.futures import ProcessPoolExecutor
 
 load_dotenv()
@@ -56,7 +60,7 @@ QUERY_STORE_STATUS_HOUR = '''
 													'''
 QUERY_STORE_TIMEZONE = ("SELECT timezone_str FROM bq_results WHERE store_id=%s")
 
-def find_store_ids() -> Tuple:
+def find_store_ids() -> Any:
 	cursor = connection.cursor()
 	cursor.execute(QUERY_STORE_IDS)
 	store_ids = cursor.fetchall()
@@ -66,36 +70,38 @@ def find_tz(store_id: int) -> str:
 	cursor = connection.cursor()
 	cursor.execute(QUERY_STORE_TIMEZONE, (store_id, ))
 	time_zone = cursor.fetchone()
-	return str.strip(time_zone[0]) if time_zone else 'America/Chicago'
+	if time_zone and isinstance(time_zone, str):
+		return str.strip(time_zone[0])
+	return 'America/Chicago'
 
-def find_week_status(time_zone: str, store_id: int) -> List:
+def find_week_status(time_zone: str, store_id: int) -> Any:
 	cursor = connection.cursor()
 	cursor.execute(QUERY_STORE_STATUS_WEEK, (time_zone, store_id))
 	return cursor.fetchall()
 
-def find_day_status(time_zone: str, store_id: int) -> List:
+def find_day_status(time_zone: str, store_id: int) -> Any:
 	cursor = connection.cursor()
 	cursor.execute(QUERY_STORE_STATUS_DAY, (time_zone, store_id))
 	return cursor.fetchall()
 
-def find_day_24_7_status(store_id, time_zone) -> int:
+def find_day_24_7_status(store_id, time_zone) -> Any:
 	cursor = connection.cursor()
 	cursor.execute(QUERY_STORE_STATUS_DAY_24_7, (store_id, time_zone))
 	return cursor.fetchone()
 
-def find_hour_status(time_zone: str, store_id: int) -> List:
+def find_hour_status(time_zone: str, store_id: int) -> Any:
 	cursor = connection.cursor()
 	cursor.execute(QUERY_STORE_STATUS_HOUR, (time_zone, store_id))
 	return cursor.fetchone()
 
 #Returns a list of dictionaries with 0th index being 'from' timings and 1st index being 'to' timings.
-def find_store_hours(store_id: int) -> List:
+def find_store_hours(store_id: int) -> Any:
 	cursor = connection.cursor()
 	cursor.execute(QUERY_STORE_HOURS, (store_id, ))
 	res = cursor.fetchall()
 	return res
 
-def convert_datetime_to_timedelta(dt):
+def convert_datetime_to_timedelta(dt: datetime) -> timedelta:
 	td = timedelta(
 		hours=dt.hour,
 		minutes=dt.minute,
@@ -103,7 +109,7 @@ def convert_datetime_to_timedelta(dt):
 	)
 	return td
 
-def count_day_or_week_hours(week_store_status, day, store_open_time, store_close_time, active, inactive):
+def count_day_or_week_hours(week_store_status, day, store_open_time, store_close_time, active, inactive) -> List[Union[int, int]]:
 	for status, utc_timestamp, local_timestamp, weekday in week_store_status:
 		if day == weekday:
 

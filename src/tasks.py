@@ -1,3 +1,7 @@
+import datetime
+import csv
+import pytz
+
 from celery import Celery
 from celery import group
 from dotenv import load_dotenv
@@ -12,11 +16,10 @@ from helper import find_day_24_7_status
 from helper import find_hour_status
 from helper import find_store_ids
 from datetime import timedelta, timezone
-import datetime
 from dateutil import parser
-import csv
 from typing import List
-import pytz
+from typing import Union
+from typing import Tuple
 
 load_dotenv()
 PASSWORD=getenv('PASSWORD')
@@ -46,7 +49,7 @@ app.conf.update(
 # minutes from it.
 
 @app.task
-def find_week_hours(store_id: int, store_hours: List):
+def find_week_hours(store_id: int, store_hours: Tuple[Tuple[int, str, str]]) -> Union[List[Union[int, int]], None]:
 	time_zone = find_tz(store_id)
 	week_store_status = find_week_status(time_zone, store_id)
 
@@ -95,7 +98,7 @@ def find_week_hours(store_id: int, store_hours: List):
 	return [active_week_hours, inactive_week_hours]
 
 @app.task
-def find_day_hours(store_id, store_hours):
+def find_day_hours(store_id: int, store_hours: Tuple[Tuple[int, str, str]]) -> Union[List[Union[int, int]], None]:
 	time_zone = find_tz(store_id)
 
 	day_store_status = find_day_status(time_zone, store_id)
@@ -137,7 +140,7 @@ def find_day_hours(store_id, store_hours):
 	return [active_day_hours, inactive_day_hours]
 
 @app.task
-def find_hours(store_id, store_hours):
+def find_hours(store_id: int, store_hours: Tuple[Tuple[int, str, str]]) -> Union[List[Union[int, int]], None]:
 	time_zone = find_tz(store_id)
 	query_res = find_hour_status(time_zone, store_id)
 
@@ -157,7 +160,9 @@ def find_hours(store_id, store_hours):
 			store_open_timedelta = convert_datetime_to_timedelta(store_open_time)
 			store_close_timedelta = convert_datetime_to_timedelta(store_close_time)
 
-			timestamp_local = parser.parse(timestamp_local)
+			if isinstance(timestamp_local, str):
+				timestamp_local = parser.parse(timestamp_local)
+
 			local_timestamp_timedelta = convert_datetime_to_timedelta(timestamp_local)
 
 			if (
@@ -166,19 +171,23 @@ def find_hours(store_id, store_hours):
 				):
 				#Current time is set to the maximum time + 1 hour in the utc time_zone
 				utc_datetime = parser.parse('2023-01-25 19:00:00')
-				current_time = utc_datetime.replace(tzinfo=timezone.utc).astimezone(tz=pytz.timezone(time_zone)).replace(tzinfo=None)
+
+				local_timezone = pytz.timezone(time_zone)
+
+				current_time_aware = utc_datetime.replace(tzinfo=timezone.utc).astimezone(tz=local_timezone)
+				current_time_naive = current_time_aware.replace(tzinfo=None)
 
 				if status == 'active':
-					active_minutes_timedelta = current_time - timestamp_local
+					active_minutes_timedelta = current_time_naive - timestamp_local
 					active_minutes = active_minutes_timedelta.seconds // 60
 					return [active_minutes, 60 - active_minutes]
 
 				elif status == 'inactive':
-					inactive_minutes_timedelta = current_time - timestamp_local.minute
+					inactive_minutes_timedelta = current_time_naive - timestamp_local
 					inactive_minutes = inactive_minutes_timedelta.seconds // 60
 					return [60 - inactive_minutes, inactive_minutes]
 
-def fromat_timedelta_to_hhmmss(td: timedelta):
+def fromat_timedelta_to_hhmmss(td: timedelta) -> str:
 	td_in_seconds = td.total_seconds()
 	hours, remainder = divmod(td_in_seconds, 3600)
 	minutes, seconds = divmod(remainder, 60)
@@ -192,7 +201,7 @@ def fromat_timedelta_to_hhmmss(td: timedelta):
 	return "{}:{}:{}".format(hours, minutes,seconds)
 
 @app.task(bind=True)
-def enqueue_store_status_calculations(self):
+def enqueue_store_status_calculations(self) -> str:
 	store_id_list = find_store_ids()
 
 	csv_file = open(f'C:\\Users\\Sammy\\Desktop\\backend_assignment\\db\\{self.request.id}.csv', 'w', newline='')
